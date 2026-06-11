@@ -50,7 +50,6 @@ const MahasiswaDashboard = () => {
   const [logbookList, setLogbookList] = useState([]);
   const [logbookToday, setLogbookToday] = useState(null);
   const [logbookForm, setLogbookForm] = useState({
-    tanggal: "",
     kegiatan: "",
     kendala: "",
   });
@@ -82,8 +81,6 @@ const MahasiswaDashboard = () => {
     console.log("🔐 Dashboard Load:", {
       user: storedUser?.nama,
     });
-
-    setLogbookForm((prev) => ({ ...prev, tanggal: todayString() }));
 
     // Small delay to ensure localStorage is fully written
     setTimeout(() => {
@@ -173,7 +170,6 @@ const MahasiswaDashboard = () => {
       if (res.data.success && res.data.data) {
         setLogbookToday(res.data.data);
         setLogbookForm({
-          tanggal: res.data.data.tanggal,
           kegiatan: res.data.data.kegiatan,
           kendala: res.data.data.kendala || "",
         });
@@ -228,7 +224,6 @@ const MahasiswaDashboard = () => {
       } else {
         // Create
         const res = await axiosInstance.post("/logbook", {
-          tanggal: logbookForm.tanggal || todayString(),
           kegiatan: logbookForm.kegiatan,
           kendala: logbookForm.kendala,
         });
@@ -290,7 +285,6 @@ const MahasiswaDashboard = () => {
     if (item.status !== "draft") return;
     setEditingLogbookId(item.id);
     setLogbookForm({
-      tanggal: item.tanggal,
       kegiatan: item.kegiatan,
       kendala: item.kendala || "",
     });
@@ -877,9 +871,7 @@ const MahasiswaDashboard = () => {
                       <span className="text-gray-600">Tanggal logbook:</span>{" "}
                       <strong className="text-blue-900">
                         {new Date(
-                          editingLogbookId
-                            ? logbookForm.tanggal
-                            : todayString(),
+                          logbookToday?.tanggal || todayString(),
                         ).toLocaleDateString("id-ID", {
                           weekday: "long",
                           year: "numeric",
