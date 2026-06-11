@@ -73,6 +73,9 @@ import pendaftaranRoutes from "./routes/pendaftaran.js";
 // Import route untuk admin pendaftaran
 import adminPendaftaranRoutes from "./routes/adminPendaftaran.js";
 
+// Import route untuk logbook (mahasiswa + admin)
+import logbookRoutes from "./routes/logbook.js";
+
 // Karena pakai ES modules, perlu manual define __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -201,6 +204,10 @@ app.use("/api", pendaftaranRoutes);
 // Mount router untuk admin pendaftaran
 // Endpoint: /api/admin-pendaftaran/*
 app.use("/api", adminPendaftaranRoutes);
+
+// Mount router untuk logbook (mahasiswa + admin)
+// Endpoint: /api/logbook/*, /api/admin/logbook/*
+app.use("/api", logbookRoutes);
 
 /*
  * PROTECTED ROUTES - MAHASISWA/ANAK SMK

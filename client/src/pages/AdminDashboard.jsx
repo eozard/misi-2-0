@@ -62,6 +62,15 @@ const AdminDashboard = () => {
   const [izinList, setIzinList] = useState([]);
   const [izinLoading, setIzinLoading] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
+  // State logbook
+  const [logbookList, setLogbookList] = useState([]);
+  const [logbookLoading, setLogbookLoading] = useState(false);
+  const [logbookFilter, setLogbookFilter] = useState({
+    status: "all",
+    fromDate: "",
+    toDate: "",
+    nama: "",
+  });
   // Notifikasi toast untuk feedback users
   const { toasts, pushToast, dismissToast } = useToast();
   const navigate = useNavigate();
@@ -140,8 +149,98 @@ const AdminDashboard = () => {
     if (activeTab === "report") {
       fetchReportData();
       fetchIzinData(); // Fetch izin data juga saat report dibuka
+    } else if (activeTab === "logbook") {
+      fetchLogbookData();
     }
   }, [activeTab]);
+
+  const fetchLogbookData = async () => {
+    setLogbookLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (logbookFilter.status && logbookFilter.status !== "all") {
+        params.append("status", logbookFilter.status);
+      }
+      if (logbookFilter.fromDate) params.append("from", logbookFilter.fromDate);
+      if (logbookFilter.toDate) params.append("to", logbookFilter.toDate);
+      if (logbookFilter.nama) params.append("nama", logbookFilter.nama);
+      const res = await axiosInstance.get(
+        `/admin/logbook?${params.toString()}`,
+      );
+      if (res.data.success) setLogbookList(res.data.data || []);
+    } catch (err) {
+      console.error("Fetch logbook error:", err);
+      pushToast({
+        type: "error",
+        title: "Gagal",
+        message: "Gagal memuat data logbook",
+      });
+    } finally {
+      setLogbookLoading(false);
+    }
+  };
+
+  const handleResetLogbook = (item) => {
+    setConfirmState({
+      title: "Reset logbook ke draft?",
+      message: `Logbook ${item.nama} tanggal ${item.tanggal} akan dibuka kembali untuk diedit.`,
+      confirmText: "Reset",
+      tone: "primary",
+      onConfirm: async () => {
+        try {
+          const res = await axiosInstance.post(
+            `/admin/logbook/${item.id}/reset`,
+          );
+          if (res.data.success) {
+            pushToast({
+              type: "success",
+              title: "Logbook di-reset",
+              message: res.data.message,
+            });
+            fetchLogbookData();
+          }
+        } catch (err) {
+          pushToast({
+            type: "error",
+            title: "Gagal",
+            message:
+              err.response?.data?.message || "Gagal reset logbook",
+          });
+        }
+      },
+    });
+  };
+
+  const handleDeleteLogbookAdmin = (item) => {
+    setConfirmState({
+      title: "Hapus logbook?",
+      message: `Logbook ${item.nama} tanggal ${item.tanggal} akan dihapus permanen.`,
+      confirmText: "Hapus",
+      tone: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await axiosInstance.delete(
+            `/admin/logbook/${item.id}`,
+          );
+          if (res.data.success) {
+            pushToast({
+              type: "success",
+              title: "Logbook dihapus",
+              message: res.data.message,
+            });
+            fetchLogbookData();
+          }
+        } catch (err) {
+          pushToast({
+            type: "error",
+            title: "Gagal",
+            message:
+              err.response?.data?.message || "Gagal hapus logbook",
+          });
+        }
+      },
+    });
+  };
 
   const fetchStudentAttendance = async (nama) => {
     if (!nama) return;
@@ -603,7 +702,7 @@ const AdminDashboard = () => {
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <div className="flex space-x-8">
-            {["stats", "devices", "students", "report"].map((tab) => (
+            {["stats", "logbook", "devices", "students", "report"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -615,7 +714,9 @@ const AdminDashboard = () => {
               >
                 {tab === "izin"
                   ? "Izin"
-                  : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  : tab === "logbook"
+                    ? "Logbook"
+                    : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -666,6 +767,192 @@ const AdminDashboard = () => {
                 </div>
                 <Calendar className="w-12 h-12 text-yellow-600" />
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Logbook Tab */}
+        {activeTab === "logbook" && (
+          <div className="space-y-4">
+            {/* Filter */}
+            <div className="card">
+              <h2 className="text-xl font-bold mb-4">🔍 Filter Logbook</h2>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Status</label>
+                  <select
+                    className="input-field"
+                    value={logbookFilter.status}
+                    onChange={(e) =>
+                      setLogbookFilter({
+                        ...logbookFilter,
+                        status: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="all">Semua</option>
+                    <option value="draft">Draft</option>
+                    <option value="submitted">Submitted</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nama</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Cari nama..."
+                    value={logbookFilter.nama}
+                    onChange={(e) =>
+                      setLogbookFilter({
+                        ...logbookFilter,
+                        nama: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Dari Tanggal
+                  </label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={logbookFilter.fromDate}
+                    onChange={(e) =>
+                      setLogbookFilter({
+                        ...logbookFilter,
+                        fromDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Sampai Tanggal
+                  </label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={logbookFilter.toDate}
+                    onChange={(e) =>
+                      setLogbookFilter({
+                        ...logbookFilter,
+                        toDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <button
+                  onClick={fetchLogbookData}
+                  disabled={logbookLoading}
+                  className="btn-primary flex items-center justify-center"
+                >
+                  {logbookLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    "Filter"
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* List Logbook */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">
+                  📓 Daftar Logbook ({logbookList.length})
+                </h2>
+              </div>
+
+              {logbookLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" />
+                </div>
+              ) : logbookList.length === 0 ? (
+                <p className="text-center text-gray-500 py-6">
+                  Belum ada logbook
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {logbookList.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`p-4 border rounded-lg ${
+                        item.status === "submitted"
+                          ? "border-green-200 bg-green-50/30"
+                          : "border-yellow-200 bg-yellow-50/30"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {item.nama}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {item.kelompok && (
+                              <span className="capitalize mr-2">
+                                {item.kelompok}
+                              </span>
+                            )}
+                            {new Date(item.tanggal).toLocaleDateString(
+                              "id-ID",
+                              {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              },
+                            )}
+                          </p>
+                          <span
+                            className={
+                              item.status === "submitted"
+                                ? "badge-green mt-1 inline-block"
+                                : "badge-yellow mt-1 inline-block"
+                            }
+                          >
+                            {item.status === "submitted"
+                              ? "Submitted"
+                              : "Draft"}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {item.status === "submitted" && (
+                            <button
+                              onClick={() => handleResetLogbook(item)}
+                              className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded"
+                              title="Buka kembali untuk diedit"
+                            >
+                              Reset ke Draft
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteLogbookAdmin(item)}
+                            className="text-xs text-red-600 hover:text-red-800 px-2 py-1 border border-red-200 rounded flex items-center justify-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Hapus
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap mb-1">
+                        <strong>Kegiatan:</strong> {item.kegiatan}
+                      </p>
+                      {item.kendala && (
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                          <strong>Kendala:</strong> {item.kendala}
+                        </p>
+                      )}
+                      {item.submitted_at && (
+                        <p className="text-xs text-gray-400 mt-2">
+                          Disubmit:{" "}
+                          {new Date(item.submitted_at).toLocaleString("id-ID")}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
