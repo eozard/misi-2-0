@@ -67,6 +67,12 @@ import {
   updateIzinStatus, // Approve/reject izin
 } from "./routes/admin.js";
 
+// Import route untuk fitur pendaftaran (publik)
+import pendaftaranRoutes from "./routes/pendaftaran.js";
+
+// Import route untuk admin pendaftaran
+import adminPendaftaranRoutes from "./routes/adminPendaftaran.js";
+
 // Karena pakai ES modules, perlu manual define __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -187,6 +193,14 @@ app.get("/api/check-ip", (req, res) => {
  */
 // POST /api/login - Login user (mahasiswa atau admin)
 app.post("/api/login", login);
+
+// Mount router untuk pendaftaran publik
+// Endpoint: POST /api/pendaftaran
+app.use("/api", pendaftaranRoutes);
+
+// Mount router untuk admin pendaftaran
+// Endpoint: /api/admin-pendaftaran/*
+app.use("/api", adminPendaftaranRoutes);
 
 /*
  * PROTECTED ROUTES - MAHASISWA/ANAK SMK

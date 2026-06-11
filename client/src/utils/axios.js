@@ -12,15 +12,30 @@ const axiosInstance = axios.create({
   },
 });
 
+// Public endpoints yang tidak butuh token
+const PUBLIC_ENDPOINTS = [
+  "/login",
+  "/check-ip",
+  "/pendaftaran",
+  "/admin-pendaftaran/login",
+];
+
 // Add token to every request
 axiosInstance.interceptors.request.use(
   (config) => {
     // Don't require token for public endpoints
-    if (config.url === "/login" || config.url === "/check-ip") {
+    if (PUBLIC_ENDPOINTS.includes(config.url)) {
       return config;
     }
 
-    const token = localStorage.getItem("token");
+    // Untuk endpoint admin-pendaftaran (kecuali login), pakai token admin pendaftaran
+    let token = null;
+    if (config.url?.startsWith("/admin-pendaftaran")) {
+      token = localStorage.getItem("adminPendaftaranToken");
+    } else {
+      token = localStorage.getItem("token");
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log(
@@ -44,9 +59,20 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       console.error("❌ 401 Unauthorized - clearing token and redirecting");
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/";
+      // Hanya bersihkan token user biasa, jangan bersihkan adminPendaftaranToken
+      // agar tidak force-logout admin pendaftaran di tab berbeda
+      const isAdminPendaftaranEndpoint = error.config?.url?.startsWith(
+        "/admin-pendaftaran",
+      );
+      if (isAdminPendaftaranEndpoint) {
+        localStorage.removeItem("adminPendaftaranToken");
+        localStorage.removeItem("adminPendaftaranUser");
+        // Jangan redirect otomatis, biar AdminPendaftaran page handle UI-nya
+      } else {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/";
+      }
     }
     return Promise.reject(error);
   },

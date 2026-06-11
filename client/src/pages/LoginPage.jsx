@@ -3,7 +3,7 @@
  */
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogIn, Loader2 } from "lucide-react";
+import { LogIn, Loader2, UserPlus, Shield } from "lucide-react";
 import axiosInstance from "../utils/axios";
 import { getDeviceIdSync } from "../utils/fingerprint";
 
@@ -120,6 +120,24 @@ const LoginPage = () => {
               )}
             </button>
           </form>
+        </div>
+
+        {/* Link ke halaman lain */}
+        <div className="mt-6 space-y-2">
+          <button
+            onClick={() => navigate("/pendaftaran")}
+            className="w-full flex items-center justify-center px-4 py-3 bg-white border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 rounded-lg text-blue-700 font-medium transition"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Daftar Sebagai Peserta Baru
+          </button>
+          <button
+            onClick={() => navigate("/admin_pendaftaran")}
+            className="w-full flex items-center justify-center px-4 py-2 bg-white border border-gray-200 hover:border-gray-400 hover:bg-gray-50 rounded-lg text-gray-700 text-sm transition"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Login Admin Pendaftaran
+          </button>
         </div>
       </div>
     </div>

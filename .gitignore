@@ -35,3 +35,7 @@ Thumbs.db
 # Build
 build/
 out/
+
+# Uploads (file PDF pendaftar, dsb)
+server/uploads/
+uploads/
