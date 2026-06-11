@@ -871,24 +871,25 @@ const MahasiswaDashboard = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSaveLogbook} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tanggal
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                      <input
-                        type="date"
-                        className="input-field pl-10"
-                        value={logbookForm.tanggal}
-                        onChange={(e) =>
-                          setLogbookForm({
-                            ...logbookForm,
-                            tanggal: e.target.value,
-                          })
-                        }
-                        disabled={logbookLoading || !!editingLogbookId}
-                      />
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <div className="text-sm">
+                      <span className="text-gray-600">Tanggal logbook:</span>{" "}
+                      <strong className="text-blue-900">
+                        {new Date(
+                          editingLogbookId
+                            ? logbookForm.tanggal
+                            : todayString(),
+                        ).toLocaleDateString("id-ID", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </strong>
+                      <span className="text-xs text-gray-500 ml-2">
+                        (lock ke hari ini, tidak bisa dipilih)
+                      </span>
                     </div>
                   </div>
                   <div>

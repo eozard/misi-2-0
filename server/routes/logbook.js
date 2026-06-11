@@ -153,12 +153,12 @@ router.get("/logbook/:id", verifyToken, isMahasiswa, async (req, res) => {
 /*
  * ENDPOINT: POST /api/logbook
  * Create draft logbook baru
- * Body: { tanggal, kegiatan, kendala? }
- * Default tanggal = hari ini kalau tidak dikirim
+ * Body: { kegiatan, kendala? }
+ * Tanggal otomatis di-lock ke hari ini (tidak bisa dipilih tanggal lain)
  */
 router.post("/logbook", verifyToken, isMahasiswa, async (req, res) => {
   try {
-    const { tanggal, kegiatan, kendala } = req.body;
+    const { kegiatan, kendala } = req.body;
 
     if (!kegiatan || !kegiatan.trim()) {
       return res
@@ -166,7 +166,7 @@ router.post("/logbook", verifyToken, isMahasiswa, async (req, res) => {
         .json({ success: false, message: "Kegiatan wajib diisi" });
     }
 
-    const tanggalFinal = tanggal || todayDate();
+    const tanggalFinal = todayDate();
 
     // Cek duplikat
     const { data: existing } = await supabase
@@ -179,7 +179,7 @@ router.post("/logbook", verifyToken, isMahasiswa, async (req, res) => {
     if (existing) {
       return res.status(409).json({
         success: false,
-        message: `Sudah ada logbook untuk tanggal ${tanggalFinal} (status: ${existing.status})`,
+        message: `Sudah ada logbook untuk hari ini (status: ${existing.status})`,
         data: formatLogbook(existing),
       });
     }
