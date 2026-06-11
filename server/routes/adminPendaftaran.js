@@ -2,34 +2,25 @@
  * ============================================================================
  * ROUTES: ADMIN PENDAFTARAN
  * ============================================================================
- * File ini berisi endpoint untuk admin pendaftaran (login & manajemen pendaftar).
+ * Endpoint untuk autentikasi & manajemen akun admin_pendaftaran.
  *
  * ENDPOINT:
- * - POST   /api/admin-pendaftaran/login        Login admin (return JWT)
- * - GET    /api/admin-pendaftaran/me           Info admin yang sedang login
- * - GET    /api/admin-pendaftaran/pendaftar    List semua pendaftar
- * - GET    /api/admin-pendaftaran/stats        Statistik (jumlah pendaftar, dll)
- * - POST   /api/admin-pendaftaran/assign       Assign pendaftar ke divisi
- * - DELETE /api/admin-pendaftaran/pendaftar/:id Hapus pendaftar
- * - GET    /api/admin-pendaftaran/files/:id    Lihat daftar file pendaftar
+ * - POST /api/admin-pendaftaran/login        Login admin (return JWT)
+ * - GET  /api/admin-pendaftaran/list         List admin (public, untuk cek)
+ * - POST /api/admin-pendaftaran/seed         Seed admin default kalau belum ada
+ * - POST /api/admin-pendaftaran/create       Buat admin baru (admin only)
+ * - DELETE /api/admin-pendaftaran/:id       Hapus admin (admin only)
  *
- * LOGIKA BISNIS:
- * - 30 pendaftar paling awal (urutan 1-30) = PRIORITAS
- * - Maksimal 6 pendaftar per divisi setelah di-assign
- * - Admin bisa memindahkan pendaftar ke divisi yang sesuai
+ * JWT Token:
+ * - Disimpan di localStorage dengan key 'admin_pendaftaran_token'
+ * - User info di 'admin_pendaftaran_user'
  * ============================================================================
  */
 
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { supabase } from "../config/supabase.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
@@ -38,18 +29,6 @@ const JWT_SECRET = () =>
   process.env.JWT_SECRET_ADMIN_PENDAFTARAN ||
   "your-super-secret-jwt-key-min-32-characters-long-here";
 
-const DIVISI_OPTIONS = [
-  "networking",
-  "software_engineer",
-  "multimedia",
-  "ai",
-  "data_analyst",
-];
-
-const MAX_PER_DIVISI = 6;
-const PRIORITY_LIMIT = 30;
-
-// Middleware: verifikasi token admin pendaftaran
 const verifyAdminPendaftaran = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -77,12 +56,10 @@ const verifyAdminPendaftaran = (req, res, next) => {
 /*
  * ENDPOINT: POST /api/admin-pendaftaran/login
  * Body: { username, password }
- * Response: { success, token, admin: { id, username, nama } }
  */
 router.post("/admin-pendaftaran/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    console.log(`[admin-pendaftaran/login] attempt username=${username}`);
     if (!username || !password) {
       return res
         .status(400)
@@ -95,20 +72,13 @@ router.post("/admin-pendaftaran/login", async (req, res) => {
       .eq("username", username)
       .single();
 
-    if (error) {
-      console.error("[admin-pendaftaran/login] supabase error:", error);
-    }
     if (error || !admin) {
-      console.log(`[admin-pendaftaran/login] admin not found: ${username}`);
       return res
         .status(401)
         .json({ success: false, message: "Username atau password salah" });
     }
 
     const passwordMatch = await bcrypt.compare(password, admin.password);
-    console.log(
-      `[admin-pendaftaran/login] user=${username} match=${passwordMatch} hashPrefix=${(admin.password || "").slice(0, 7)}`,
-    );
     if (!passwordMatch) {
       return res
         .status(401)
@@ -144,311 +114,185 @@ router.post("/admin-pendaftaran/login", async (req, res) => {
 });
 
 /*
- * ENDPOINT: GET /api/admin-pendaftaran/me
- * Return info admin yang sedang login (cek token valid)
+ * ENDPOINT: GET /api/admin-pendaftaran/list
+ * Public: untuk cek jumlah admin (misal sebelum login)
+ * Tidak return password
  */
-router.get("/admin-pendaftaran/me", verifyAdminPendaftaran, (req, res) => {
-  return res.json({
-    success: true,
-    admin: {
-      id: req.admin.id,
-      username: req.admin.username,
-      nama: req.admin.nama,
-    },
-  });
-});
-
-/*
- * ENDPOINT: GET /api/admin-pendaftaran/stats
- * Statistik jumlah pendaftar
- */
-router.get("/admin-pendaftaran/stats", verifyAdminPendaftaran, async (req, res) => {
+router.get("/admin-pendaftaran/list", async (req, res) => {
   try {
-    const { data: all } = await supabase
-      .from("pendaftar")
-      .select("id, urutan, status, divisi_assigned");
+    const { data, error } = await supabase
+      .from("admin_pendaftaran")
+      .select("id, username, nama, created_at")
+      .order("created_at", { ascending: true });
 
-    const total = all?.length || 0;
-    const priority = all?.filter((p) => p.urutan <= PRIORITY_LIMIT).length || 0;
-    const outside = total - priority;
-    const assigned = all?.filter((p) => p.divisi_assigned).length || 0;
-    const unassigned = total - assigned;
-
-    // Count per divisi
-    const perDivisi = DIVISI_OPTIONS.reduce((acc, d) => {
-      acc[d] = all?.filter((p) => p.divisi_assigned === d).length || 0;
-      return acc;
-    }, {});
-
-    return res.json({
-      success: true,
-      stats: {
-        total,
-        priority,
-        outside,
-        assigned,
-        unassigned,
-        perDivisi,
-        maxPerDivisi: MAX_PER_DIVISI,
-        priorityLimit: PRIORITY_LIMIT,
-      },
-    });
-  } catch (err) {
-    console.error("Stats error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-/*
- * ENDPOINT: GET /api/admin-pendaftaran/pendaftar
- * Query params:
- *   - category: 'priority' | 'outside' | 'all' (default 'all')
- *   - divisi: filter by divisi_assigned
- *   - status: filter by status
- * Response: list pendaftar sorted by urutan ASC
- */
-router.get("/admin-pendaftaran/pendaftar", verifyAdminPendaftaran, async (req, res) => {
-  try {
-    const { category, divisi, status } = req.query;
-
-    let query = supabase
-      .from("pendaftar")
-      .select("*")
-      .order("urutan", { ascending: true });
-
-    if (category === "priority") {
-      query = query.lte("urutan", PRIORITY_LIMIT);
-    } else if (category === "outside") {
-      query = query.gt("urutan", PRIORITY_LIMIT);
-    }
-
-    if (divisi && divisi !== "all") {
-      query = query.eq("divisi_assigned", divisi);
-    }
-
-    if (status && status !== "all") {
-      query = query.eq("status", status);
-    }
-
-    const { data, error } = await query;
     if (error) {
-      console.error("Fetch pendaftar error:", error);
       return res.status(500).json({ success: false, message: error.message });
     }
 
     return res.json({
       success: true,
       data: data || [],
+      total: (data || []).length,
     });
   } catch (err) {
-    console.error("Fetch pendaftar error:", err);
+    console.error("List admin error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
 /*
- * ENDPOINT: POST /api/admin-pendaftaran/assign
- * Body: { pendaftar_id, divisi_assigned }
- * Assign pendaftar ke divisi tertentu, dengan validasi max 6 per divisi.
+ * ENDPOINT: POST /api/admin-pendaftaran/seed
+ * Public: bikin admin default kalau belum ada
+ * Default: username=admin, password=admin123
  */
-router.post("/admin-pendaftaran/assign", verifyAdminPendaftaran, async (req, res) => {
+router.post("/admin-pendaftaran/seed", async (req, res) => {
   try {
-    const { pendaftar_id, divisi_assigned } = req.body;
+    const { data: existing } = await supabase
+      .from("admin_pendaftaran")
+      .select("id")
+      .limit(1);
 
-    if (!pendaftar_id || !divisi_assigned) {
-      return res
-        .status(400)
-        .json({ success: false, message: "pendaftar_id dan divisi_assigned wajib diisi" });
-    }
-
-    if (!DIVISI_OPTIONS.includes(divisi_assigned)) {
-      return res.status(400).json({
-        success: false,
-        message: `Divisi tidak valid. Pilihan: ${DIVISI_OPTIONS.join(", ")}`,
+    if (existing && existing.length > 0) {
+      return res.json({
+        success: true,
+        seeded: false,
+        message: "Admin sudah ada, tidak perlu seed",
       });
     }
 
-    // Cek pendaftar ada
-    const { data: existing, error: fetchError } = await supabase
-      .from("pendaftar")
-      .select("*")
-      .eq("id", pendaftar_id)
-      .single();
-
-    if (fetchError || !existing) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Pendaftar tidak ditemukan" });
-    }
-
-    // Hitung jumlah di divisi tujuan
-    const { count: currentCount } = await supabase
-      .from("pendaftar")
-      .select("*", { count: "exact", head: true })
-      .eq("divisi_assigned", divisi_assigned)
-      .neq("id", pendaftar_id);
-
-    if ((currentCount || 0) >= MAX_PER_DIVISI) {
-      return res.status(400).json({
-        success: false,
-        message: `Divisi ${divisi_assigned} sudah penuh (maksimal ${MAX_PER_DIVISI} peserta)`,
-      });
-    }
+    const defaultPassword = "admin123";
+    const hash = await bcrypt.hash(defaultPassword, 10);
 
     const { data, error } = await supabase
-      .from("pendaftar")
-      .update({
-        divisi_assigned,
-        status: "assigned",
-        assigned_at: new Date().toISOString(),
-        assigned_by: req.admin.username,
-      })
-      .eq("id", pendaftar_id)
-      .select()
+      .from("admin_pendaftaran")
+      .insert([
+        {
+          username: "admin",
+          password: hash,
+          nama: "Admin Pendaftaran",
+        },
+      ])
+      .select("id, username, nama")
       .single();
 
     if (error) {
-      console.error("Assign error:", error);
+      console.error("Seed admin error:", error);
       return res.status(500).json({ success: false, message: error.message });
     }
 
     return res.json({
       success: true,
-      message: `Pendaftar ${data.nama} berhasil di-assign ke divisi ${divisi_assigned}`,
+      seeded: true,
       data,
+      message: `Admin default berhasil dibuat (username: admin, password: admin123)`,
     });
   } catch (err) {
-    console.error("Assign error:", err);
+    console.error("Seed admin error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
 /*
- * ENDPOINT: DELETE /api/admin-pendaftaran/pendaftar/:id
- * Hapus pendaftar + file terkait
+ * ENDPOINT: POST /api/admin-pendaftaran/create
+ * Admin only: buat admin baru
+ * Body: { username, password, nama }
  */
-router.delete("/admin-pendaftaran/pendaftar/:id", verifyAdminPendaftaran, async (req, res) => {
-  try {
-    const pendaftarId = parseInt(req.params.id, 10);
-    if (isNaN(pendaftarId)) {
-      return res.status(400).json({ success: false, message: "ID tidak valid" });
-    }
-
-    // Ambil data pendaftar untuk hapus file
-    const { data: pendaftar } = await supabase
-      .from("pendaftar")
-      .select("id, nama")
-      .eq("id", pendaftarId)
-      .single();
-
-    if (!pendaftar) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Pendaftar tidak ditemukan" });
-    }
-
-    // Ambil daftar file
-    const { data: files } = await supabase
-      .from("pendaftar_files")
-      .select("*")
-      .eq("pendaftar_id", pendaftarId);
-
-    // Hapus file di disk
-    if (files) {
-      for (const f of files) {
-        const filePath = path.join(uploadDir, f.filename);
-        try {
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-        } catch (e) {
-          console.error("Gagal hapus file:", filePath, e.message);
-        }
+router.post(
+  "/admin-pendaftaran/create",
+  verifyAdminPendaftaran,
+  async (req, res) => {
+    try {
+      const { username, password, nama } = req.body;
+      if (!username || !password || !nama) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Semua field wajib diisi" });
       }
+      if (password.length < 6) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Password minimal 6 karakter" });
+      }
+
+      // Cek username sudah dipakai
+      const { data: existing } = await supabase
+        .from("admin_pendaftaran")
+        .select("id")
+        .eq("username", username)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        return res
+          .status(409)
+          .json({ success: false, message: "Username sudah dipakai" });
+      }
+
+      const hash = await bcrypt.hash(password, 10);
+      const { data, error } = await supabase
+        .from("admin_pendaftaran")
+        .insert([{ username, password: hash, nama }])
+        .select("id, username, nama, created_at")
+        .single();
+
+      if (error) {
+        return res
+          .status(500)
+          .json({ success: false, message: error.message });
+      }
+
+      return res.json({ success: true, data });
+    } catch (err) {
+      console.error("Create admin error:", err);
+      return res
+        .status(500)
+        .json({ success: false, message: "Server error" });
     }
-
-    // Hapus data pendaftar (ON DELETE CASCADE akan hapus pendaftar_files)
-    const { error } = await supabase
-      .from("pendaftar")
-      .delete()
-      .eq("id", pendaftarId);
-
-    if (error) {
-      console.error("Delete pendaftar error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-
-    return res.json({
-      success: true,
-      message: `Pendaftar ${pendaftar.nama} berhasil dihapus`,
-    });
-  } catch (err) {
-    console.error("Delete pendaftar error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
+  },
+);
 
 /*
- * ENDPOINT: GET /api/admin-pendaftaran/files/:pendaftarId
- * Ambil daftar file (metadata) milik pendaftar
+ * ENDPOINT: DELETE /api/admin-pendaftaran/:id
+ * Admin only: hapus admin (tidak bisa hapus diri sendiri)
  */
-router.get("/admin-pendaftaran/files/:pendaftarId", verifyAdminPendaftaran, async (req, res) => {
-  try {
-    const pendaftarId = parseInt(req.params.pendaftarId, 10);
-    if (isNaN(pendaftarId)) {
-      return res.status(400).json({ success: false, message: "ID tidak valid" });
+router.delete(
+  "/admin-pendaftaran/:id",
+  verifyAdminPendaftaran,
+  async (req, res) => {
+    try {
+      const targetId = parseInt(req.params.id, 10);
+      if (isNaN(targetId)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "ID tidak valid" });
+      }
+
+      if (String(req.admin.id) === String(targetId)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Tidak bisa menghapus akun sendiri" });
+      }
+
+      const { data, error } = await supabase
+        .from("admin_pendaftaran")
+        .delete()
+        .eq("id", targetId)
+        .select("id, username")
+        .single();
+
+      if (error) {
+        return res
+          .status(500)
+          .json({ success: false, message: error.message });
+      }
+
+      return res.json({ success: true, data });
+    } catch (err) {
+      console.error("Delete admin error:", err);
+      return res
+        .status(500)
+        .json({ success: false, message: "Server error" });
     }
-
-    const { data, error } = await supabase
-      .from("pendaftar_files")
-      .select("*")
-      .eq("pendaftar_id", pendaftarId)
-      .order("tipe", { ascending: true });
-
-    if (error) {
-      return res.status(500).json({ success: false, message: error.message });
-    }
-
-    return res.json({ success: true, data: data || [] });
-  } catch (err) {
-    console.error("Fetch files error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-/*
- * ENDPOINT: GET /api/admin-pendaftaran/file/:fileId/download
- * Download file PDF (CV, transkrip, atau surat)
- */
-router.get("/admin-pendaftaran/file/:fileId/download", verifyAdminPendaftaran, async (req, res) => {
-  try {
-    const fileId = parseInt(req.params.fileId, 10);
-    if (isNaN(fileId)) {
-      return res.status(400).json({ success: false, message: "ID tidak valid" });
-    }
-
-    const { data: file, error } = await supabase
-      .from("pendaftar_files")
-      .select("*")
-      .eq("id", fileId)
-      .single();
-
-    if (error || !file) {
-      return res.status(404).json({ success: false, message: "File tidak ditemukan" });
-    }
-
-    const filePath = path.join(uploadDir, file.filename);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, message: "File fisik tidak ditemukan di server" });
-    }
-
-    res.download(filePath, file.original_name);
-  } catch (err) {
-    console.error("Download file error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-const uploadDir = path.join(__dirname, "..", "uploads", "pendaftaran");
+  },
+);
 
 export default router;

@@ -8,7 +8,7 @@ import LoginPage from "./pages/LoginPage";
 import MahasiswaDashboard from "./pages/MahasiswaDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import PendaftaranPage from "./pages/PendaftaranPage";
-import AdminPendaftaran from "./pages/AdminPendaftaran";
+import AdminPendaftaranPage from "./pages/AdminPendaftaranPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -17,7 +17,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/pendaftaran" element={<PendaftaranPage />} />
-        <Route path="/admin_pendaftaran" element={<AdminPendaftaran />} />
+        <Route path="/admin_pendaftaran" element={<AdminPendaftaranPage />} />
         <Route
           path="/dashboard"
           element={

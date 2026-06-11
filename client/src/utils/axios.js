@@ -18,6 +18,8 @@ const PUBLIC_ENDPOINTS = [
   "/check-ip",
   "/pendaftaran",
   "/admin-pendaftaran/login",
+  "/admin-pendaftaran/list",
+  "/admin-pendaftaran/seed",
 ];
 
 const isAdminPendaftaran = (url) =>
