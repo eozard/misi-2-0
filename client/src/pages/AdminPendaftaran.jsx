@@ -63,14 +63,28 @@ const AdminPendaftaran = () => {
   const [confirmState, setConfirmState] = useState(null);
   const { toasts, pushToast, dismissToast } = useToast();
 
-  // Cek token di localStorage saat mount
+  // Cek token di localStorage saat mount, validasi ke server
   useEffect(() => {
-    const token = localStorage.getItem("adminPendaftaranToken");
-    const stored = JSON.parse(localStorage.getItem("adminPendaftaranUser") || "null");
-    if (token && stored) {
-      setAdmin(stored);
-    }
-    setAuthChecked(true);
+    const verifyStoredToken = async () => {
+      const token = localStorage.getItem("adminPendaftaranToken");
+      const stored = JSON.parse(
+        localStorage.getItem("adminPendaftaranUser") || "null",
+      );
+      if (token && stored) {
+        // Optimistic: tampilkan dulu data dari localStorage
+        setAdmin(stored);
+        // Validasi token ke server. Kalau invalid/expired, interceptor akan
+        // bersihkan token & set admin ke null agar form login muncul lagi.
+        try {
+          await axiosInstance.get("/admin-pendaftaran/me");
+        } catch (err) {
+          // Interceptor sudah handle cleanup
+          setAdmin(null);
+        }
+      }
+      setAuthChecked(true);
+    };
+    verifyStoredToken();
   }, []);
 
   // Fetch data saat admin sudah login

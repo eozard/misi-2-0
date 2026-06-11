@@ -20,17 +20,22 @@ const PUBLIC_ENDPOINTS = [
   "/admin-pendaftaran/login",
 ];
 
+const isAdminPendaftaran = (url) =>
+  typeof url === "string" && url.startsWith("/admin-pendaftaran");
+
 // Add token to every request
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Don't require token for public endpoints
-    if (PUBLIC_ENDPOINTS.includes(config.url)) {
+    const reqUrl = config.url || "";
+
+    // Skip token attach untuk public endpoints
+    if (PUBLIC_ENDPOINTS.includes(reqUrl)) {
       return config;
     }
 
     // Untuk endpoint admin-pendaftaran (kecuali login), pakai token admin pendaftaran
     let token = null;
-    if (config.url?.startsWith("/admin-pendaftaran")) {
+    if (isAdminPendaftaran(reqUrl)) {
       token = localStorage.getItem("adminPendaftaranToken");
     } else {
       token = localStorage.getItem("token");
@@ -38,15 +43,6 @@ axiosInstance.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log(
-        "✅ Token attached to:",
-        config.url,
-        "(length:",
-        token.length,
-        ")",
-      );
-    } else {
-      console.warn("⚠️  NO TOKEN for protected request:", config.url);
     }
     return config;
   },
@@ -58,16 +54,14 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.error("❌ 401 Unauthorized - clearing token and redirecting");
-      // Hanya bersihkan token user biasa, jangan bersihkan adminPendaftaranToken
-      // agar tidak force-logout admin pendaftaran di tab berbeda
-      const isAdminPendaftaranEndpoint = error.config?.url?.startsWith(
-        "/admin-pendaftaran",
-      );
-      if (isAdminPendaftaranEndpoint) {
+      // Untuk endpoint admin-pendaftaran, JANGAN redirect ke "/"
+      // cukup bersihkan token; halaman AdminPendaftaran akan render form login lagi
+      const reqUrl = error.config?.url || "";
+      if (isAdminPendaftaran(reqUrl)) {
         localStorage.removeItem("adminPendaftaranToken");
         localStorage.removeItem("adminPendaftaranUser");
-        // Jangan redirect otomatis, biar AdminPendaftaran page handle UI-nya
+        // Tidak redirect; component AdminPendaftaran mendeteksi token hilang
+        // dan otomatis switch ke tampilan login.
       } else {
         localStorage.removeItem("token");
         localStorage.removeItem("user");

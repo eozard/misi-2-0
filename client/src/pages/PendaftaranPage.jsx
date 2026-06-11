@@ -27,7 +27,6 @@ import {
   Palette,
   Brain,
   BarChart3,
-  Home,
 } from "lucide-react";
 import axiosInstance from "../utils/axios";
 
@@ -253,24 +252,6 @@ const PendaftaranPage = () => {
             Admin akan menghubungi Anda melalui email untuk konfirmasi dan
             informasi selanjutnya.
           </p>
-          <div className="flex gap-2 justify-center">
-            <button
-              onClick={() => {
-                setSuccess(null);
-                setForm({ nama: "", nim: "", email: "", divisi_pilihan: "" });
-                setFiles({ cv: null, transkrip: null, surat: null });
-              }}
-              className="btn-primary"
-            >
-              Daftar Lagi
-            </button>
-            <button
-              onClick={() => navigate("/")}
-              className="btn-secondary flex items-center"
-            >
-              <Home className="w-4 h-4 mr-2" /> Kembali
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -435,18 +416,10 @@ const PendaftaranPage = () => {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                className="btn-secondary flex items-center"
-                disabled={loading}
-              >
-                <Home className="w-4 h-4 mr-2" /> Kembali
-              </button>
+            <div className="pt-2">
               <button
                 type="submit"
-                className="btn-primary flex-1 flex items-center justify-center"
+                className="btn-primary w-full flex items-center justify-center"
                 disabled={loading}
               >
                 {loading ? (
