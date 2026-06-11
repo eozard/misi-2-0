@@ -63,11 +63,13 @@ CREATE TABLE IF NOT EXISTS pendaftar_files (
   original_name VARCHAR(255) NOT NULL,
   file_size INTEGER,
   mime_type VARCHAR(100),
+  storage_path VARCHAR(500),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-COMMENT ON TABLE pendaftar_files IS 'Metadata file PDF yang diupload pendaftar (CV, transkrip, surat).';
+COMMENT ON TABLE pendaftar_files IS 'Metadata file PDF yang diupload pendaftar (CV, transkrip, surat). Disimpan di Supabase Storage bucket "pendaftaran".';
 COMMENT ON COLUMN pendaftar_files.tipe IS 'cv | transkrip | surat';
+COMMENT ON COLUMN pendaftar_files.storage_path IS 'Path file di Supabase Storage bucket, contoh: "1/cv_1700000000_abc.pdf". NULL untuk data lama yang masih di disk lokal.';
 
 
 -- =============================================================================
