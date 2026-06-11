@@ -474,13 +474,14 @@ router.get("/pendaftaran/file/:id/:type", async (req, res) => {
     if (error || !file) {
       return res
         .status(404)
-        .json({ success: false, message: "File tidak ditemukan" });
+        .json({ success: false, message: "File metadata tidak ditemukan di database" });
     }
 
     if (!file.storage_path) {
-      return res
-        .status(404)
-        .json({ success: false, message: "File path tidak ada (kemungkinan dari versi lama)" });
+      return res.status(404).json({
+        success: false,
+        message: "File belum ada di storage (data lama, harus daftar ulang)",
+      });
     }
 
     // Download dari Supabase Storage, stream ke client
@@ -490,21 +491,69 @@ router.get("/pendaftaran/file/:id/:type", async (req, res) => {
 
     if (dlErr || !blob) {
       console.error("Storage download error:", dlErr);
-      return res
-        .status(404)
-        .json({ success: false, message: "Gagal download dari storage" });
+      return res.status(404).json({
+        success: false,
+        message: "File tidak ada di storage: " + (dlErr?.message || "unknown"),
+      });
     }
 
     const arrayBuffer = await blob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
     res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Length", buffer.length);
     res.setHeader(
       "Content-Disposition",
       `inline; filename="${file.original_name}"`,
     );
-    res.send(Buffer.from(arrayBuffer));
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.send(buffer);
   } catch (err) {
     console.error("Serve file error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: "Server error: " + err.message });
+  }
+});
+
+/*
+ * ENDPOINT: GET /api/pendaftaran/file-url/:id/:type
+ * Return direct public URL (untuk debugging)
+ */
+router.get("/pendaftaran/file-url/:id/:type", async (req, res) => {
+  try {
+    const pendaftarId = parseInt(req.params.id, 10);
+    const { type } = req.params;
+
+    const tipeMap = { cv: "cv", transkrip: "transkrip", surat_persetujuan: "surat" };
+    const dbTipe = tipeMap[type];
+    if (!dbTipe) {
+      return res.status(400).json({ success: false, message: "Tipe file tidak valid" });
+    }
+
+    const { data: file } = await supabase
+      .from("pendaftar_files")
+      .select("*")
+      .eq("pendaftar_id", pendaftarId)
+      .eq("tipe", dbTipe)
+      .single();
+
+    if (!file) {
+      return res.status(404).json({ success: false, message: "File tidak ditemukan" });
+    }
+
+    const { getPublicUrl } = await import("../config/storage.js");
+    const publicUrl = file.storage_path ? getPublicUrl(file.storage_path) : null;
+
+    return res.json({
+      success: true,
+      data: {
+        id: file.id,
+        tipe: file.tipe,
+        original_name: file.original_name,
+        storage_path: file.storage_path,
+        public_url: publicUrl,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 

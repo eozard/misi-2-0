@@ -1215,28 +1215,23 @@ const PendaftarCard = ({
  * DetailModal - modal detail pendaftar + preview file
  * ========================================================================== */
 const DetailModal = ({ item, onClose }) => {
-  // Pakai proxy endpoint supaya PDF di-serve dengan Content-Disposition: inline
-  // (Supabase default attachment bikin Edge/Firefox langsung download)
-  const proxyUrl = (type) => `${API_URL}/pendaftaran/file/${item.id}/${type}`;
-
+  // Pakai URL Supabase Storage public langsung (lebih reliable)
+  // Fallback ke proxy endpoint kalau URL kosong
   const files = [
-    { label: "CV", url: proxyUrl("cv"), originalUrl: item.cv_url, key: "cv" },
-    {
-      label: "Transkrip Nilai",
-      url: proxyUrl("transkrip"),
-      originalUrl: item.transkrip_url,
-      key: "transkrip",
-    },
-    {
-      label: "Surat Persetujuan",
-      url: proxyUrl("surat_persetujuan"),
-      originalUrl: item.surat_persetujuan_url,
-      key: "surat",
-    },
-  ].filter((f) => f.originalUrl);
+    { label: "CV", url: item.cv_url, key: "cv" },
+    { label: "Transkrip Nilai", url: item.transkrip_url, key: "transkrip" },
+    { label: "Surat Persetujuan", url: item.surat_persetujuan_url, key: "surat" },
+  ];
 
-  const [activeTab, setActiveTab] = useState(files[0]?.key || "");
-  const activeFile = files.find((f) => f.key === activeTab) || files[0];
+  const availableFiles = files.filter((f) => f.url);
+
+  const [activeTab, setActiveTab] = useState(availableFiles[0]?.key || "");
+  const activeFile = availableFiles.find((f) => f.key === activeTab) || availableFiles[0];
+  const [iframeError, setIframeError] = useState(false);
+
+  const handleIframeLoad = () => {
+    setIframeError(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1295,48 +1290,90 @@ const DetailModal = ({ item, onClose }) => {
             Preview Berkas PDF
           </h4>
 
-          {/* Tabs PDF */}
-          <div className="flex flex-wrap gap-1 mb-3 border-b border-gray-200">
-            {files.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setActiveTab(f.key)}
-                className={`px-3 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition ${
-                  activeTab === f.key
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {/* PDF Preview */}
-          {activeFile && (
-            <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-100">
-              <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200">
-                <span className="text-sm font-medium text-gray-700">
-                  {activeFile.label}
-                </span>
-                <a
-                  href={activeFile.originalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Download / Buka di tab baru
-                </a>
-              </div>
-              <iframe
-                src={activeFile.url}
-                title={activeFile.label}
-                className="w-full"
-                style={{ height: "60vh", border: "none" }}
-              />
+          {availableFiles.length === 0 ? (
+            <div className="border border-amber-200 bg-amber-50 rounded-lg p-6 text-center">
+              <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+              <p className="text-sm text-amber-800 font-medium">
+                File PDF belum tersedia
+              </p>
+              <p className="text-xs text-amber-700 mt-1">
+                Kemungkinan pendaftar ini dari versi lama. Pendaftar harus
+                mengirim ulang untuk melihat preview.
+              </p>
             </div>
+          ) : (
+            <>
+              {/* Tabs PDF */}
+              <div className="flex flex-wrap gap-1 mb-3 border-b border-gray-200">
+                {availableFiles.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => {
+                      setActiveTab(f.key);
+                      setIframeError(false);
+                    }}
+                    className={`px-3 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition ${
+                      activeTab === f.key
+                        ? "border-indigo-600 text-indigo-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* PDF Preview */}
+              {activeFile && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-100">
+                  <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-700">
+                      {activeFile.label}
+                    </span>
+                    <a
+                      href={activeFile.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download / Buka di tab baru
+                    </a>
+                  </div>
+                  {iframeError ? (
+                    <div className="p-6 text-center bg-white">
+                      <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+                      <p className="text-sm text-gray-700 font-medium">
+                        Gagal memuat preview PDF
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1 mb-3">
+                        Browser mungkin memblokir embed. Klik tombol download
+                        untuk membuka di tab baru.
+                      </p>
+                      <a
+                        href={activeFile.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary inline-flex items-center gap-2 text-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        Buka PDF
+                      </a>
+                    </div>
+                  ) : (
+                    <iframe
+                      src={activeFile.url}
+                      title={activeFile.label}
+                      className="w-full"
+                      style={{ height: "60vh", border: "none" }}
+                      onLoad={handleIframeLoad}
+                      onError={() => setIframeError(true)}
+                    />
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
