@@ -82,6 +82,7 @@ const verifyAdminPendaftaran = (req, res, next) => {
 router.post("/admin-pendaftaran/login", async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log(`[admin-pendaftaran/login] attempt username=${username}`);
     if (!username || !password) {
       return res
         .status(400)
@@ -94,13 +95,20 @@ router.post("/admin-pendaftaran/login", async (req, res) => {
       .eq("username", username)
       .single();
 
+    if (error) {
+      console.error("[admin-pendaftaran/login] supabase error:", error);
+    }
     if (error || !admin) {
+      console.log(`[admin-pendaftaran/login] admin not found: ${username}`);
       return res
         .status(401)
         .json({ success: false, message: "Username atau password salah" });
     }
 
     const passwordMatch = await bcrypt.compare(password, admin.password);
+    console.log(
+      `[admin-pendaftaran/login] user=${username} match=${passwordMatch} hashPrefix=${(admin.password || "").slice(0, 7)}`,
+    );
     if (!passwordMatch) {
       return res
         .status(401)
