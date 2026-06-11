@@ -401,6 +401,24 @@ const MahasiswaDashboard = () => {
           message: response.data.message,
         });
         fetchRiwayat();
+
+        // Setelah absen sore, ingatkan untuk isi logbook
+        if (sesi === "sore") {
+          // Tunggu sebentar supaya toast sukses tampil dulu
+          setTimeout(() => {
+            setConfirmState({
+              title: "Jangan lupa isi Logbook hari ini!",
+              message:
+                "Absen sore sudah selesai. Apakah Anda ingin mengisi logbook kegiatan hari ini sekarang?",
+              confirmText: "Ya, Isi Logbook",
+              cancelText: "Tidak",
+              tone: "primary",
+              onConfirm: () => {
+                setActiveTab("logbook");
+              },
+            });
+          }, 800);
+        }
       }
     } catch (error) {
       const msg = error.response?.data?.message || "Absen gagal";
