@@ -50,7 +50,8 @@ COMMENT ON COLUMN pendaftar.status IS 'pending | priority | assigned | rejected'
 -- TABEL 2: pendaftar_files
 -- =============================================================================
 -- Menyimpan metadata file PDF yang diupload pendaftar.
--- File PDF sendiri disimpan di server lokal (folder server/uploads/pendaftaran).
+-- File PDF sendiri disimpan di Supabase Storage bucket (default: 'pendaftaran-files').
+-- Folder struktur di bucket: <pendaftar_id>/<tipe>_<timestamp>_<nama-asli>.pdf
 -- Kolom tipe:
 --   - 'cv'        : File CV
 --   - 'transkrip' : File transkrip nilai semester kemarin
@@ -67,9 +68,13 @@ CREATE TABLE IF NOT EXISTS pendaftar_files (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-COMMENT ON TABLE pendaftar_files IS 'Metadata file PDF yang diupload pendaftar (CV, transkrip, surat). Disimpan di Supabase Storage bucket "pendaftaran".';
+-- Tambah kolom storage_path kalau tabel sudah ada (untuk update dari versi lama)
+ALTER TABLE pendaftar_files
+ADD COLUMN IF NOT EXISTS storage_path VARCHAR(500);
+
+COMMENT ON TABLE pendaftar_files IS 'Metadata file PDF yang diupload pendaftar (CV, transkrip, surat). Disimpan di Supabase Storage bucket "pendaftaran-files".';
 COMMENT ON COLUMN pendaftar_files.tipe IS 'cv | transkrip | surat';
-COMMENT ON COLUMN pendaftar_files.storage_path IS 'Path file di Supabase Storage bucket, contoh: "1/cv_1700000000_abc.pdf". NULL untuk data lama yang masih di disk lokal.';
+COMMENT ON COLUMN pendaftar_files.storage_path IS 'Path file di Supabase Storage bucket, contoh: "1/cv_1700000000_abc.pdf". NULL untuk data lama.';
 
 
 -- =============================================================================

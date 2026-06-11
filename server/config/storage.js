@@ -6,22 +6,19 @@
  *
  * CARA SETUP:
  * 1. Buka Supabase Dashboard → Storage
- * 2. Create bucket baru dengan nama: 'pendaftaran'
+ * 2. Create bucket baru dengan nama 'pendaftaran-files' (atau sesuai setting)
  * 3. Set Public: ON (supaya PDF bisa langsung di-preview)
- *
- * Atau via SQL Editor:
- *   INSERT INTO storage.buckets (id, name, public)
- *   VALUES ('pendaftaran', 'pendaftaran', true)
- *   ON CONFLICT (id) DO NOTHING;
+ * 4. Buat folder di dalam bucket: cv, transkrip, surat_persetujuan (opsional)
+ *    ATAU biarkan kosong, kode akan otomatis bikin sub-folder
  *
  * ENV VARIABLE (opsional):
- *   PENDaftaran_BUCKET  (default: 'pendaftaran')
+ *   PENDAFTARAN_BUCKET  (default: 'pendaftaran-files')
  * ============================================================================
  */
 
 import { supabase } from "../config/supabase.js";
 
-const BUCKET = process.env.PENDAFTARAN_BUCKET || "pendaftaran";
+const BUCKET = process.env.PENDAFTARAN_BUCKET || "pendaftaran-files";
 
 /**
  * Upload file ke Supabase Storage.
