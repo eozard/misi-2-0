@@ -1,0 +1,45 @@
+{
+  "name": "absensi-pkl",
+  "version": "1.0.0",
+  "description": "Sistem Absensi PKL Fullstack",
+  "type": "module",
+  "scripts": {
+    "dev": "node server/server.js",
+    "start": "node server/server.js",
+    "build": "cd client && npm install && npm run build",
+    "postinstall": "cd server && npm install && cd ../client && npm install",
+    "dev:frontend": "cd client && vite",
+    "build:frontend": "cd client && vite build",
+    "preview:frontend": "cd client && vite preview",
+    "seed": "node server/scripts/seedDatabase.js",
+    "create-admin": "node server/scripts/createAdminUser.js",
+    "list-users": "node server/scripts/listAllUsers.js"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "absensi",
+    "pkl",
+    "supabase"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "express": "^4.18.2",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "ip-range-check": "^0.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.5",
+    "vite": "^5.0.0"
+  }
+}
