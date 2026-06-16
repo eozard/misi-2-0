@@ -1,492 +1,257 @@
-# 📋 Sistem Absensi PKL (Praktek Kerja Lapangan)
+# Sistem Absensi PKL dan Pendaftaran
 
-Sistem absensi berbasis web untuk mengelola kehadiran mahasiswa dan anak SMK dalam program PKL dengan fitur browser fingerprinting, device binding, dan pembatasan WiFi kampus.
+Aplikasi full-stack untuk mengelola absensi PKL, izin, logbook harian, dan pendaftaran peserta. Backend menggunakan Express.js dan Supabase, frontend menggunakan React + Vite + Tailwind CSS.
 
-## 🎯 Features
+## Fitur Utama
 
-- ✅ **Authentication**: JWT-based login dengan browser fingerprinting
-- ✅ **Device Binding**: Batasi 2 device per user (mahasiswa/anak_smk)
-- ✅ **WiFi Restriction**: Hanya bisa absen dari WiFi Kampus (IP: 103.209.9.\*)
-- ✅ **Session Management**: Pagi (08:00-11:59) & Sore (12:00-18:00) dengan validasi jeda 6 jam
-- ✅ **Admin Dashboard**: Stats, filter, search, export Excel
-- ✅ **Student Dashboard**: History absensi & real-time jam
-- ✅ **Database Seeding**: Dummy data 40 siswa + 30 hari attendance
+- Login berbasis JWT untuk admin, mahasiswa, dan anak SMK.
+- Device binding berbasis fingerprint browser untuk membatasi perangkat user.
+- Validasi absensi dari jaringan kampus dengan whitelist IP `103.209.9.*`.
+- Absensi sesi pagi dan sore dengan aturan waktu, anti-duplikat, dan jeda minimal.
+- Pengajuan izin oleh mahasiswa, lengkap dengan status approval admin.
+- Logbook harian mahasiswa dengan status draft/submitted.
+- Dashboard admin untuk statistik, user, device, laporan absensi, izin, dan logbook.
+- Form pendaftaran publik dengan upload PDF CV, transkrip, dan surat persetujuan.
+- Dashboard admin pendaftaran untuk melihat pendaftar, assign divisi, dan mengelola akun admin pendaftaran.
+- Penyimpanan data dan file menggunakan Supabase Database + Supabase Storage.
 
-## 🛠️ Tech Stack
+## Teknologi
 
-- **Frontend**: React 18 + Vite + TailwindCSS + Lucide Icons
-- **Backend**: Node.js + Express.js + Supabase
-- **Database**: PostgreSQL (Supabase)
-- **Auth**: JWT + Browser Fingerprinting (@fingerprintjs/fingerprintjs)
+- Frontend: React 18, Vite, Tailwind CSS, React Router, Axios, Lucide React.
+- Backend: Node.js, Express.js, JWT, bcryptjs, Multer.
+- Database dan storage: Supabase PostgreSQL dan Supabase Storage.
+- Runtime: Node.js 20+.
 
-## 📁 Struktur Project
+## Struktur Project
 
-```
-absensi-pkl-supabase/          # Root project
-├── server/                     # Backend API (Express.js)
-│   ├── config/
-│   │   └── supabase.js
-│   ├── middleware/
-│   │   ├── auth.js
-│   │   └── wifiKampus.js
-│   ├── routes/
-│   │   ├── auth.js
-│   │   └── admin.js
-│   ├── scripts/
-│   │   ├── seedDatabase.js
-│   │   ├── createAdminUser.js
-│   │   └── ...
-│   ├── server.js               # Entry point
-│   └── package.json
-│
-├── client/                      # Frontend React (Vite)
+```text
+.
+├── client/
 │   ├── src/
 │   │   ├── components/
+│   │   ├── hooks/
 │   │   ├── pages/
-│   │   ├── utils/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── public/
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── package.json
-│
-├── .env                        # Environment variables
-├── package.json                # Root scripts
-└── README.md
-```
-
-## 🚀 Quick Start
-
-### 1. Setup Environment
-
-```bash
-# Copy env example
-cp .env.example .env
-
-# Edit .env dengan credentials Supabase Anda
-```
-
-### 2. Install Dependencies
-
-```bash
-# Install semua dependencies (root, server, client)
-npm install
-
-# Jika ingin install separate:
-npm install                    # Install root
-cd server && npm install      # Install server
-cd client && npm install      # Install client
-```
-
-### 3. Jalankan Project
-
-#### Option A: Development Mode (Separated)
-
-**Terminal 1 - Backend:**
-
-```bash
-cd server
-npm run dev
-# Server runs on http://localhost:5000
-```
-
-**Terminal 2 - Frontend:**
-
-```bash
-cd client
-npm run dev
-# Frontend runs on http://localhost:5173 (with API proxy to :5000)
-```
-
-#### Option B: Production Mode (Unified)
-
-```bash
-# Build frontend
-cd client && npm run build && cd ..
-
-# Run backend (serves frontend)
-cd server && npm run dev
-# Access on http://localhost:5000
-```
-
-### 4. Database Setup
-
-```bash
-# Seed dummy data
-npm run seed
-
-# Create admin user
-npm run create-admin
-
-# List all users
-npm run list-users
-```
-
-## 📝 Available Scripts
-
-### Root Scripts
-
-```bash
-npm run dev              # Run backend server
-npm run dev:frontend    # Run frontend dev server
-npm run build:frontend  # Build frontend
-npm run preview:frontend # Preview frontend build
-npm run seed            # Seed database with dummy data
-npm run create-admin    # Create admin account
-npm run list-users      # List all users
-```
-
-### Server Scripts
-
-```bash
-cd server
-npm run dev                    # Start server
-npm run seed                   # Seed database
-npm run create-admin           # Create admin
-npm run list-users             # List users
-node test-comprehensive.js    # Run comprehensive tests
-```
-
-### Client Scripts
-
-```bash
-cd client
-npm run dev        # Start dev server
-npm run build      # Build for production
-npm run preview    # Preview production build
-```
-
-## 🔐 Authentication
-
-### Login
-
-```bash
-POST /api/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password",
-  "fingerprint": "device-fingerprint-hash"
-}
-```
-
-### Device Binding
-
-- Max 2 devices per user
-- Automatic fingerprint-based binding
-- Remove device dari dashboard
-
-## 📊 API Endpoints
-
-### Authentication
-
-- `POST /api/login` - Login
-
-### Mahasiswa
-
-- `POST /api/absen` - Record attendance
-- `GET /api/riwayat` - Get attendance history
-- `POST /api/izin` - Submit permit request
-- `GET /api/izin` - Get permits
-- `DELETE /api/izin/:id` - Cancel permit
-
-### Admin
-
-- `GET /api/admin/stats` - Dashboard stats
-- `GET /api/admin/students` - List students
-- `GET /api/admin/attendance/:nama` - Student attendance
-- `GET /api/admin/devices` - List devices
-- `DELETE /api/admin/devices/:deviceId` - Remove device
-- `GET /api/admin/users` - List users
-- `POST /api/admin/users` - Create user
-- `GET /api/admin/izin` - All permits
-- `PUT /api/admin/izin/:id` - Update permit status
-
-## 📋 Struktur Project
-
-│ │ └── wifiKampus.js
-│ ├── routes/
-│ │ ├── auth.js
-│ │ └── admin.js
-│ ├── scripts/
-│ │ ├── seedDatabase.js
-│ │ ├── createAdminUser.js
-│ │ └── listAllUsers.js
-│ ├── .env
-│ ├── .env.example
-│ ├── server.js
-│ └── package.json
-│
-├── frontend/
-│ ├── src/
-│ │ ├── components/
-│ │ │ └── ProtectedRoute.jsx
-│ │ ├── pages/
-│ │ │ ├── LoginPage.jsx
-│ │ │ ├── MahasiswaDashboard.jsx
-│ │ │ └── AdminDashboard.jsx
-│ │ ├── utils/
-│ │ │ ├── axios.js
-│ │ │ └── fingerprint.js
-│ │ ├── App.jsx
-│ │ ├── main.jsx
-│ │ └── index.css
-│ ├── index.html
-│ ├── vite.config.js
-│ ├── tailwind.config.js
-│ ├── postcss.config.js
-│ ├── .env
-│ └── package.json
-│
+│   │   └── utils/
+│   ├── package.json
+│   └── vite.config.js
+├── server/
+│   ├── config/
+│   ├── middleware/
+│   ├── routes/
+│   ├── package.json
+│   └── server.js
 ├── database.sql
+├── add_izin_columns_to_attendances.sql
+├── create_izin_table.sql
+├── create_logbook_supabase.sql
+├── table_pendaftaran_supabase.sql
+├── fix_device_bindings_rls.sql
+├── package.json
 └── README.md
+```
 
-````
+## Halaman Aplikasi
 
-## 🚀 Quick Start
+- `/` - login user absensi.
+- `/dashboard` - dashboard mahasiswa/anak SMK.
+- `/admin` - dashboard admin absensi.
+- `/pendaftaran` - form pendaftaran publik.
+- `/admin_pendaftaran` - dashboard admin pendaftaran.
 
-### Prerequisites
+## Persiapan Environment
 
-- Node.js v16+
-- Supabase account (free tier: https://supabase.com)
-- npm atau yarn
-
-### 1. Setup Supabase
-
-1. Buat project baru di [Supabase Dashboard](https://supabase.com)
-2. Copy `SUPABASE_URL` dan `SUPABASE_ANON_KEY` dari project settings
-3. Buka SQL Editor dan copy-paste isi file `database.sql`
-4. Jalankan semua SQL queries untuk membuat tables
-
-### 2. Setup Backend
-
-```bash
-cd backend
-npm install
-````
-
-**Buat file `.env`:**
+Buat file `.env` di root project atau di folder `server/`.
 
 ```env
 PORT=5000
-SUPABASE_URL=https://xxxxxxxx.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-JWT_SECRET=your-super-secret-jwt-key-min-32-characters-long-here
 NODE_ENV=development
+
+SUPABASE_URL=https://xxxxxxxx.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+JWT_SECRET=your-minimum-32-character-secret
+PENDAFTARAN_BUCKET=pendaftaran-files
+
 BYPASS_WIFI_CHECK=true
+# BYPASS_TIME_CHECK=true
+# BYPASS_PAGI_ONLY=true
+# BYPASS_JEDA_CHECK=true
 ```
 
-**Seed database:**
+Untuk frontend development, buat `client/.env` jika perlu:
 
-```bash
-npm run seed
+```env
+VITE_API_URL=http://localhost:5000/api
 ```
 
-**Jalankan server:**
+Catatan:
 
-```bash
-npm run dev
+- `SUPABASE_SERVICE_ROLE_KEY` disarankan untuk backend karena beberapa fitur admin perlu akses penuh.
+- `BYPASS_WIFI_CHECK=true` hanya untuk development. Untuk production gunakan `false`.
+- `PENDAFTARAN_BUCKET` default-nya `pendaftaran-files`.
+
+## Setup Database dan Storage
+
+Jalankan file SQL berikut di Supabase SQL Editor sesuai kebutuhan:
+
+1. `database.sql` untuk tabel utama user, absensi, dan device binding.
+2. `add_izin_columns_to_attendances.sql` atau `create_izin_table.sql` untuk fitur izin.
+3. `create_logbook_supabase.sql` untuk fitur logbook.
+4. `table_pendaftaran_supabase.sql` untuk fitur pendaftaran.
+5. `fix_device_bindings_rls.sql` jika perlu memperbaiki policy RLS device binding.
+
+Buat bucket Supabase Storage:
+
+```text
+pendaftaran-files
 ```
 
-Server akan berjalan di `http://localhost:5000`
+Set bucket menjadi public agar PDF pendaftar bisa dipreview dari aplikasi.
 
-### 3. Setup Frontend
+## Instalasi
+
+Install dependency root, server, dan client:
 
 ```bash
-cd frontend
 npm install
 ```
 
-**Jalankan development server:**
+Script `postinstall` di root akan menjalankan install untuk `server` dan `client`.
+
+Jika ingin manual:
+
+```bash
+cd server
+npm install
+
+cd ../client
+npm install
+```
+
+## Menjalankan Development
+
+Terminal 1 - backend:
 
 ```bash
 npm run dev
 ```
 
-Frontend akan berjalan di `http://localhost:5173`
+Backend berjalan di:
 
-## 📝 API Endpoints
-
-### Public
-
-- `POST /api/login` - Login & device binding
-
-### Protected (Mahasiswa/Anak SMK)
-
-- `POST /api/absen` - Absen (WiFi restriction)
-- `GET /api/riwayat` - Get history absensi
-
-### Protected (Admin Only)
-
-- `GET /api/admin/stats` - Get stats hari ini
-- `GET /api/admin/attendance-today` - Get absensi hari ini
-- `GET /api/admin/students` - List semua siswa
-- `GET /api/admin/attendance/:nama` - Get riwayat siswa
-
-## 🔐 Demo Credentials
-
-Setelah seeding, gunakan:
-
-**Admin:**
-
-- Nama: `admin`
-- Password: `admin123`
-
-**Mahasiswa/Anak SMK:**
-
-- Nama: (lihat list dengan `npm run list-users`)
-- Password: `12345678`
-
-## 📊 Database Schema
-
-### users
-
-```sql
-id, nama (unique), password, role, kelompok, devices (JSONB), max_devices
+```text
+http://localhost:5000
 ```
 
-### attendances
-
-```sql
-id, nama, kelompok, tanggal, sesi, jam_masuk, login_time, status, created_at
-```
-
-### device_bindings
-
-```sql
-id, device_id (unique), user_name, kelompok, bound_at, last_used, usage_count
-```
-
-## 🧪 Testing Scenarios
-
-### Login & Device Binding
-
-```
-✅ Admin login dari device apapun
-✅ Mahasiswa login pertama → device binding
-✅ Mahasiswa login dari device sama → usage count++
-❌ Mahasiswa login dari device ke-3 (max 2)
-❌ Mahasiswa A login dari device milik B
-```
-
-### Absensi
-
-```
-✅ Absen pagi jam 09:00
-❌ Absen pagi jam 07:00 (belum waktunya)
-❌ Absen sore tanpa absen pagi
-❌ Absen sore < 6 jam dari pagi
-✅ Absen sore 6+ jam dari pagi
-❌ Duplikat absen (1 sesi per hari)
-❌ Absen dari IP selain 103.209.9.* (dev: bypass)
-❌ Absen dari device tidak terdaftar
-```
-
-## 🛠️ Available Scripts
-
-### Backend
+Terminal 2 - frontend:
 
 ```bash
-npm run dev           # Start development server
-npm run seed          # Seed database dengan dummy data
-npm run create-admin  # Create admin user
-npm run list-users    # List semua users
+npm run dev:frontend
 ```
 
-### Frontend
+Frontend berjalan di:
+
+```text
+http://localhost:5173
+```
+
+## Build Production
+
+Build frontend:
 
 ```bash
-npm run dev      # Start development server
-npm run build    # Build untuk production
-npm run preview  # Preview production build
+npm run build
 ```
 
-## 🔒 Security Features
+Jalankan backend yang sekaligus serve hasil build React:
 
-1. **JWT Authentication**: Token expire 15 menit
-2. **Password Hashing**: bcrypt (10 rounds)
-3. **Device Binding**: Prevent multi-device abuse
-4. **WiFi Restriction**: IP whitelist (103.209.9.\*)
-5. **Browser Fingerprinting**: Unique device identification
-
-## 📱 UI Components
-
-- **Login Page**: Gradient background, card-based form
-- **Mahasiswa Dashboard**: Real-time clock, session buttons, history table
-- **Admin Dashboard**: 4 tabs (Stats, Attendance, Students, Report)
-- **TailwindCSS**: Custom button & badge styles
-
-## 🌐 Deployment
-
-### Backend (Render.com / Railway.app)
-
-1. Push ke GitHub
-2. Connect repository ke Render/Railway
-3. Set environment variables
-4. Deploy
-
-### Frontend (Vercel / Netlify)
-
-1. Push ke GitHub
-2. Connect repository ke Vercel/Netlify
-3. Set `VITE_API_URL` ke backend URL
-4. Deploy
-
-## 📋 Environment Variables
-
-**Backend (.env):**
-
-```
-PORT=5000
-SUPABASE_URL=...
-SUPABASE_ANON_KEY=...
-JWT_SECRET=... (min 32 chars)
-NODE_ENV=production
-BYPASS_WIFI_CHECK=false
+```bash
+npm start
 ```
 
-**Frontend (.env):**
+## Endpoint Utama
 
-```
-VITE_API_URL=https://your-backend.com/api
-```
+Public:
 
-## 🐛 Troubleshooting
+- `GET /health`
+- `GET /api/check-ip`
+- `POST /api/login`
+- `POST /api/pendaftaran`
+- `POST /api/admin-pendaftaran/login`
+- `GET /api/admin-pendaftaran/list`
+- `POST /api/admin-pendaftaran/seed`
 
-### "SUPABASE_URL dan SUPABASE_ANON_KEY harus didefinisikan"
+Mahasiswa/anak SMK:
 
-→ Pastikan `.env` file ada di backend folder dengan value yang benar
+- `POST /api/absen`
+- `GET /api/riwayat`
+- `POST /api/izin`
+- `GET /api/izin`
+- `DELETE /api/izin/:id`
+- `GET /api/logbook`
+- `GET /api/logbook/today`
+- `POST /api/logbook`
+- `PUT /api/logbook/:id`
+- `POST /api/logbook/:id/submit`
+- `DELETE /api/logbook/:id`
 
-### "Token tidak valid"
+Admin:
 
-→ JWT_SECRET di backend harus minimal 32 karakter
+- `GET /api/admin/stats`
+- `GET /api/admin/attendance-today`
+- `GET /api/admin/students`
+- `GET /api/admin/attendance/:nama`
+- `GET /api/admin/devices`
+- `DELETE /api/admin/devices/:deviceId`
+- `GET /api/admin/users`
+- `POST /api/admin/users`
+- `POST /api/admin/users/:id/reset-password`
+- `DELETE /api/admin/users/:id`
+- `GET /api/admin/report`
+- `GET /api/admin/izin`
+- `PUT /api/admin/izin/:id`
+- `GET /api/admin/logbook`
+- `GET /api/admin/logbook/:id`
+- `POST /api/admin/logbook/:id/reset`
+- `DELETE /api/admin/logbook/:id`
 
-### "Database error"
+Admin pendaftaran:
 
-→ Pastikan tables sudah dibuat (jalankan database.sql di Supabase SQL editor)
+- `GET /api/pendaftaran`
+- `PUT /api/pendaftaran/:id`
+- `DELETE /api/pendaftaran/:id`
+- `GET /api/pendaftaran/file/:id/:type`
+- `GET /api/pendaftaran/file-url/:id/:type`
+- `POST /api/admin-pendaftaran/create`
+- `DELETE /api/admin-pendaftaran/:id`
 
-### WiFi restriction tidak bekerja
+## Aturan Absensi
 
-→ Pastikan `BYPASS_WIFI_CHECK=false` di production
+- Sesi pagi: 08:00-10:00.
+- Sesi sore: 15:00-17:00.
+- Sore hanya bisa dilakukan jika user sudah absen pagi.
+- Jeda pagi ke sore minimal 6 jam, di luar waktu istirahat 12:00-13:00.
+- User tidak bisa absen dua kali pada sesi yang sama.
+- Device harus sudah terdaftar dan tidak boleh dipakai akun lain.
+- Absensi wajib dari WiFi kampus kecuali `BYPASS_WIFI_CHECK=true`.
 
-## 📚 Resources
+## Pendaftaran
 
-- [Supabase Docs](https://supabase.com/docs)
-- [Express.js Docs](https://expressjs.com)
-- [React Docs](https://react.dev)
-- [TailwindCSS Docs](https://tailwindcss.com)
-- [FingerprintJS Docs](https://fingerprint.com/blog/introduction-to-browser-fingerprinting/)
+Form pendaftaran menerima:
 
-## 📝 License
+- Nama.
+- NIM.
+- Email.
+- Divisi pilihan: Networking, Software Engineer, Multimedia, Artificial Intelligence, Data Analyst.
+- File PDF CV.
+- File PDF transkrip.
+- File PDF surat persetujuan.
 
-MIT
+Pendaftar pertama sampai urutan ke-30 diberi status `priority`, sisanya `pending`. Admin pendaftaran dapat assign divisi dengan batas maksimal 6 peserta per divisi.
 
-## 👥 Support
+## Catatan Keamanan
 
-Untuk pertanyaan atau issue, silakan buat GitHub issue di repository ini.
-
----
-
-**Dibuat dengan ❤️ untuk Sistem Absensi PKL**
+- Jangan commit file `.env` berisi kredensial asli.
+- Gunakan `JWT_SECRET` kuat minimal 32 karakter.
+- Gunakan `BYPASS_WIFI_CHECK=false` di production.
+- Simpan service role key hanya di backend/server environment.
