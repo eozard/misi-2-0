@@ -132,7 +132,7 @@ const AdminDashboard = () => {
 
     if (!token || !user || user.role !== "admin") {
       console.warn("⚠️ Redirecting to login - auth failed");
-      navigate("/");
+      navigate("/absen");
       return;
     }
 
@@ -266,7 +266,7 @@ const AdminDashboard = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("deviceId");
     console.log("🔓 Logout: Device unbound, localStorage cleared");
-    navigate("/");
+    navigate("/absen");
   };
 
   // Buat user baru dari form

@@ -72,7 +72,7 @@ const MahasiswaDashboard = () => {
     const token = localStorage.getItem("token");
 
     if (!storedUser || !token) {
-      navigate("/");
+      navigate("/absen");
       return;
     }
 
@@ -433,7 +433,7 @@ const MahasiswaDashboard = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("deviceId");
     console.log("🔓 Logout: Device unbound, localStorage cleared");
-    navigate("/");
+    navigate("/absen");
   };
 
   // Kirim izin baru

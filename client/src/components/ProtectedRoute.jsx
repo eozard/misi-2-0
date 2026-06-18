@@ -9,11 +9,11 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
   if (!token || !user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/absen" replace />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/absen" replace />;
   }
 
   return children;
